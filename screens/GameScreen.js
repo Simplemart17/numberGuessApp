@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView, Dimensions } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 
 import NumberContainer from '../components/NumberContainer';
@@ -29,7 +29,8 @@ const GameScreen = props => {
   const initialGuess = generateRandomNum(1, 100, props.userChoice);
   const [currentGuess, setCurrentGuess] = useState(initialGuess);
   const [guessedNumber, setGuessedNumber] = useState([initialGuess]);
-  
+  const [detectDeviceWidth, setDetectDeviceWidth] = useState(Dimensions.get('window').width);
+  const [detectDeviceHeight, setDetectDeviceHeight] = useState(Dimensions.get('window').height);
   const currentLow = useRef(1);
   const currentHigh = useRef(100);
 
@@ -40,6 +41,18 @@ const GameScreen = props => {
       onGameOver(guessedNumber.length);
     }
   }, [currentGuess, userChoice, onGameOver]);
+
+  useEffect(() => {
+    const updateLayout = () => {
+      setDetectDeviceWidth(Dimensions.get('window').width);
+      setDetectDeviceHeight(Dimensions.get('window').height);
+    };
+    Dimensions.addEventListener('change', updateLayout);
+
+    return () => {
+      Dimensions.removeEventListener('change', updateLayout);
+    };
+  })
 
   const nextGuessHandler = direction => {
     if (direction === 'lower' && currentGuess < props.userChoice) {
@@ -60,6 +73,34 @@ const GameScreen = props => {
       setGuessedNumber(prevGuess => [nextNumber, ...prevGuess]);
   };
 
+  let listContainerStyle = styles.listContainer;
+
+  if (detectDeviceWidth < 350) {
+    listContainerStyle = styles.listContainerBig;
+  };
+
+  if (detectDeviceHeight < 500) {
+    return (
+      <View style={styles.screen}>
+        <BodyText>Opponent's Guess</BodyText>
+        <View style={styles.buttonContainerLandscape}>
+          <MainButton onPress={nextGuessHandler.bind(this, 'lower')}>
+            <AntDesign name='left' size={24} color='white' />
+          </MainButton>
+          <NumberContainer>{currentGuess}</NumberContainer>
+          <MainButton onPress={nextGuessHandler.bind(this, 'greater')}>
+            <AntDesign name='right' size={24} color='white' />
+          </MainButton>
+        </View>
+        <View style={listContainerStyle}>
+          <ScrollView contentContainerStyle={styles.listView}>
+            {guessedNumber.map((number, index) => renderNumberList(number, guessedNumber.length - index))}
+          </ScrollView>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.screen}>
       <BodyText>Opponent's Guess</BodyText>
@@ -72,7 +113,7 @@ const GameScreen = props => {
           <AntDesign name='right' size={24} color='white' />
         </MainButton>
       </Card>
-      <View style={styles.listContainer}>
+      <View style={listContainerStyle}>
         <ScrollView contentContainerStyle={styles.listView}>
           {guessedNumber.map((number, index) => renderNumberList(number, guessedNumber.length - index))}
         </ScrollView>
@@ -94,9 +135,19 @@ const styles = StyleSheet.create({
     width: 300,
     maxWidth: '90%'
   },
+  buttonContainerLandscape: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: '80%',
+  },
   listContainer: {
     flex: 1,
     width: '80%',
+  },
+  listContainerBig: {
+    flex: 1,
+    width: '60%',
   },
   listView: {
     flexGrow: 1,
